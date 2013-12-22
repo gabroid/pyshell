@@ -1,0 +1,14 @@
+<data>
+    <dir name="dir1">
+        <item name="item1"></item>
+        <item name="item2"></item>
+        <item name="item3"></item>
+        <item name="item4"></item>
+    </dir>
+    <dir name="dir2">
+        <item name="item1"></item>
+        <item name="item2"></item>
+        <item name="item3"></item>
+        <item name="item4"></item>
+    </dir>
+</data>
