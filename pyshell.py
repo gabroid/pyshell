@@ -3,7 +3,7 @@
 
 import pygtk
 pygtk.require('2.0')
-import gtk, vte
+import gtk, vte, pango, os
 import xml.etree.ElementTree as ET
 
 class PyShell:
@@ -18,21 +18,27 @@ class PyShell:
         self.window.set_title("PyShell")
         self.window.set_border_width(5)
         self.window.set_resizable(True)
-        self.window.set_default_size(800, -1)
+        self.window.set_default_size(1280, 1024)
 
         self.window.connect("delete_event", self.delete_event)
-
-        #self.boxContainer = gtk.HBox(False, 15)
-        #self.window.add(self.boxContainer)
-        #self.boxContainer.show()
         
         self.hpaned = gtk.HPaned()
+        self.hpaned.set_position(1024)
         self.window.add(self.hpaned)
         self.hpaned.show()
 
         self.term = vte.Terminal()
-        self.pid = self.term.fork_command('bash')
+        self.term.connect("child-exited", lambda w: gtk.main_quit())
+        self.pid = self.term.fork_command('/bin/bash')
         self.term.set_emulation('xterm')
+        #self.term.feed_child("cd $HOME\n")
+        
+        font = pango.FontDescription()
+        font.set_size(11 * pango.SCALE)
+        font.set_weight(pango.WEIGHT_NORMAL)
+        font.set_stretch(pango.STRETCH_NORMAL)
+        self.term.set_font_full(font, True)
+
         self.hpaned.add1(self.term)
         self.term.show()
         
@@ -50,21 +56,6 @@ class PyShell:
                 self.myserver = j.attrib['name']
                 self.treestore.append(piter, [self.myserver])
         
-
-        #for i in self.dirlist:
-        #    self.mydir = i.attributes['name'].value
-        #    piter = self.treestore.append(None, ['%s' % self.mydir])
-        #    for j in self.serverlist:
-        #        self.server = j.attributes['name'].value
-        #        self.treestore.append(piter, ['%s' % self.server])
-    
-        # we'll add some data now - 4 rows with 3 child rows each
-        #for parent in range(4):
-        #    piter = self.treestore.append(None, ['parent %i' % parent])
-        #    for child in range(3):
-        #        self.treestore.append(piter, ['child %i of parent %i' %
-        #                (child, parent)])
-
         # create the TreeView using treestore
         self.treeview = gtk.TreeView(self.treestore)
 
