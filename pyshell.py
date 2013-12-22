@@ -63,7 +63,7 @@ class PyShell:
         self.treeview = gtk.TreeView(self.treestore)
 
         # create the TreeViewColumn to display the data
-        self.tvcolumn = gtk.TreeViewColumn('Column 0')
+        self.tvcolumn = gtk.TreeViewColumn('Server List')
 
         # add tvcolumn to treeview
         self.treeview.append_column(self.tvcolumn)
