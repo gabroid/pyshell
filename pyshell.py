@@ -4,7 +4,7 @@
 import pygtk
 pygtk.require('2.0')
 import gtk, vte
-from xml.dom import minidom
+import xml.etree.ElementTree as ET
 
 class PyShell:
     def delete_event(self, widget, data):
@@ -40,17 +40,23 @@ class PyShell:
         self.treestore = gtk.TreeStore(str)
         
         
-        xmldoc = minidom.parse('serverlist.xml')
+        tree = ET.parse("serverlist.xml")
+        root = tree.getroot()
+
+        for i in root:
+            self.mydir = i.attrib['name']
+            piter = self.treestore.append(None, [self.mydir])
+            for j in i:
+                self.myserver = j.attrib['name']
+                self.treestore.append(piter, [self.myserver])
         
-        self.dirlist =  xmldoc.getElementsByTagName('dir') 
-        
-        for i in self.dirlist:
-            self.serverlist = xmldoc.getElementsByTagName('item')
-            self.mydir = i.attributes['name'].value
-            piter = self.treestore.append(None, ['%s' % self.mydir])
-            for j in self.serverlist:
-                self.server = j.attributes['name'].value
-                self.treestore.append(piter, ['%s' % self.server])
+
+        #for i in self.dirlist:
+        #    self.mydir = i.attributes['name'].value
+        #    piter = self.treestore.append(None, ['%s' % self.mydir])
+        #    for j in self.serverlist:
+        #        self.server = j.attributes['name'].value
+        #        self.treestore.append(piter, ['%s' % self.server])
     
         # we'll add some data now - 4 rows with 3 child rows each
         #for parent in range(4):
