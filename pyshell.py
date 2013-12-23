@@ -44,6 +44,29 @@ class PyShell:
         self.item_factory = item_factory
         return item_factory.get_widget("<main>")
 
+    def new_local_tab(self, widget):
+        """Open a new vte tab on localhost"""
+        self.new_term = vte.Terminal()
+        self.pid = self.new_term.fork_command()
+        self.new_term.set_emulation('xterm')
+        
+        self.hostname = os.uname()[1]
+        self.label = gtk.Label(self.hostname)
+
+        self.notebook.append_page(self.new_term, self.label)
+        
+        self.new_term.connect("child-exited", self.remove_tab)
+
+        self.font = pango.FontDescription()
+        self.font.set_size(11 * pango.SCALE)
+        self.font.set_weight(pango.WEIGHT_NORMAL)
+        self.font.set_stretch(pango.STRETCH_NORMAL)
+        self.new_term.set_font_full(self.font, True)
+
+        self.new_term.show()
+        self.notebook.next_page()
+        self.new_term.grab_focus()
+
     def static_connection(self, widget):
         """Function to create new vte tab"""
         self.host = self.entry_host.get_text()
@@ -68,7 +91,6 @@ class PyShell:
         self.notebook.next_page()
         self.new_term.grab_focus()
         self.new_term.feed_child("ssh %s@%s\n" % (self.user, self.host))
-        self.new_term.grab_focus()
 
     def __init__(self):
 
@@ -82,7 +104,7 @@ class PyShell:
 
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_title("PyShell")
-        self.window.set_border_width(2)
+        self.window.set_border_width(5)
         self.window.set_resizable(True)
         self.window.set_default_size(1280, 1024)
 
@@ -96,7 +118,7 @@ class PyShell:
         self.vbox.pack_start(self.menubar, False, False)
         self.menubar.show()
 
-        self.table = gtk.Table(1, 4, True)
+        self.table = gtk.Table(1, 5, True)
         self.vbox.pack_start(self.table, False, False)
         self.table.show()
 
@@ -119,6 +141,10 @@ class PyShell:
         self.connect_button = gtk.Button("Connect")
         self.table.attach(self.connect_button, 3, 4, 0, 1)
         self.connect_button.show()
+
+        self.new_tab_button = gtk.Button("New tab")
+        self.table.attach(self.new_tab_button, 4, 5, 0, 1)
+        self.new_tab_button.show()
 
         self.hpaned = gtk.HPaned()
         self.hpaned.set_position(1024)
@@ -198,6 +224,7 @@ class PyShell:
 
         # Here i will define all handlers and connect for obj
         self.connect_button.connect("clicked", self.static_connection)
+        self.new_tab_button.connect("clicked", self.new_local_tab)
 
     def main(self):
         gtk.main()
