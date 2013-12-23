@@ -25,9 +25,6 @@ class PyShell:
 
         self.server_list_file.show()
 
-    def print_hello(self, w, data):
-        print "Hello, World!"
-
     def main_menu(self, window):
         accel_group = gtk.AccelGroup()
         item_factory = gtk.ItemFactory(gtk.MenuBar, "<main>", accel_group)
@@ -37,13 +34,19 @@ class PyShell:
         self.item_factory = item_factory
         return item_factory.get_widget("<main>")
 
+    def static_connection(obj, widget):
+        host = obj.entry_host.get_text()
+        user = obj.entry_user.get_text()
+        obj.term.feed_child("ssh %s@%s\n" % (user, host))
+        obj.term.grab_focus()
+
     def __init__(self):
 
         self.menu_items = (
                   ( "/_File",         None,         None, 0, "<Branch>" ),
-                  ( "/File/_New",     "<control>N", self.print_hello, 0, None ),
+                  ( "/File/_New",     "<control>N", self.open_file, 0, None ),
                   ( "/File/_Open",    "<control>O", self.open_file, 0, None ),
-                  ( "/File/_Save",    "<control>S", self.print_hello, 0, None ),
+                  ( "/File/_Save",    "<control>S", self.open_file, 0, None ),
                   ( "/File/Quit",     "<control>Q", gtk.main_quit, 0, None ),
                   )
 
@@ -62,6 +65,30 @@ class PyShell:
         self.menubar = self.main_menu(self.window)
         self.vbox.pack_start(self.menubar, False, False)
         self.menubar.show()
+
+        self.table = gtk.Table(1, 4, True)
+        self.vbox.pack_start(self.table, False, False)
+        self.table.show()
+
+        self.entry_host = gtk.Entry()
+        self.entry_host.set_text("Hostname")
+        self.table.attach(self.entry_host, 0, 1, 0, 1)
+        self.entry_host.show()
+
+        self.entry_user = gtk.Entry()
+        self.entry_user.set_text("Username")
+        self.table.attach(self.entry_user, 1, 2, 0, 1)
+        self.entry_user.show()
+
+        self.entry_pwd = gtk.Entry()
+        self.entry_pwd.set_text("Password")
+        self.entry_pwd.set_visibility(False)
+        self.table.attach(self.entry_pwd, 2, 3, 0, 1)
+        self.entry_pwd.show()
+
+        self.connect_button = gtk.Button("Connect")
+        self.table.attach(self.connect_button, 3, 4, 0, 1)
+        self.connect_button.show()
 
         self.hpaned = gtk.HPaned()
         self.hpaned.set_position(1024)
@@ -84,6 +111,7 @@ class PyShell:
         self.term.set_font_full(font, True)
 
         self.scroller.add(self.term)
+        self.term.grab_focus()
         self.term.show()
         self.scroller.show()
         
@@ -133,6 +161,10 @@ class PyShell:
         self.treeview.show()
 
         self.window.show()
+
+
+        # Here i will define all handlers and connect for obj
+        self.connect_button.connect("clicked", self.static_connection)
 
     def main(self):
         gtk.main()
