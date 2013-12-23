@@ -3,7 +3,7 @@
 
 import pygtk
 pygtk.require('2.0')
-import gtk, vte, pango, os
+import gtk, vte, pango, os, getpass
 import xml.etree.ElementTree as ET
 
 
@@ -16,16 +16,64 @@ class PyShell:
         gtk.main_quit()
         return False
 
-    def get_file(obj, widget):
-        """Retrive server list filename"""
-        list_file = obj.server_list_file.get_filename()
-        obj.server_list_file.destroy()
-        return list_file
+    def load_file(self, widow):
+        """Retrive and load server list file"""
+        self.list_file = self.server_list_file.get_filename()
+        self.server_list_file.destroy()
+
+        # create a TreeStore with one string column to use as the model
+        self.treestore = gtk.TreeStore(str)
+
+        try:
+            self.tree = ET.parse(self.list_file)
+        except:
+            print "ERROR"
+            return False
+
+        self.root = self.tree.getroot()
+
+        for i in self.root:
+            self.mydir = i.attrib['name']
+            self.piter = self.treestore.append(None, [self.mydir])
+            for j in i:
+                self.myserver = j.attrib['name']
+                self.treestore.append(self.piter, [self.myserver])
+        
+        # create the TreeView using treestore
+        self.treeview = gtk.TreeView(self.treestore)
+
+        # create the TreeViewColumn to display the data
+        self.tvcolumn = gtk.TreeViewColumn('Server List')
+
+        # add tvcolumn to treeview
+        self.treeview.append_column(self.tvcolumn)
+
+        # create a CellRendererText to render the data
+        self.cell = gtk.CellRendererText()
+
+        # add the cell to the tvcolumn and allow it to expand
+        self.tvcolumn.pack_start(self.cell, True)
+
+        # set the cell "text" attribute to column 0 - retrieve text
+        # from that column in treestore
+        self.tvcolumn.add_attribute(self.cell, 'text', 0)
+
+        # make it searchable
+        self.treeview.set_search_column(0)
+
+        # Allow sorting on the column
+        self.tvcolumn.set_sort_column_id(0)
+
+        # Allow drag and drop reordering of rows
+        self.treeview.set_reorderable(True)
+
+        self.hpaned.add2(self.treeview)
+        self.treeview.show()
         
     def open_file(self, widget, data):
         """Open server list file"""
         self.server_list_file = gtk.FileSelection("Choose a server list file")
-        self.server_list_file.ok_button.connect("clicked", self.get_file)
+        self.server_list_file.ok_button.connect("clicked", self.load_file)
         self.server_list_file.cancel_button.connect("clicked", lambda w: self.server_list_file.destroy())
         self.server_list_file.show()
 
@@ -33,16 +81,6 @@ class PyShell:
         """Remove vte tab when user enter exit in shell"""
         self.current_tab = self.notebook.get_current_page()
         self.notebook.remove_page(self.current_tab)
-
-    def main_menu(self, window):
-        """Menu toolbar"""
-        accel_group = gtk.AccelGroup()
-        item_factory = gtk.ItemFactory(gtk.MenuBar, "<main>", accel_group)
-        item_factory.create_items(self.menu_items)
-        self.window.add_accel_group(accel_group)
-
-        self.item_factory = item_factory
-        return item_factory.get_widget("<main>")
 
     def new_local_tab(self, widget):
         """Open a new vte tab on localhost"""
@@ -68,10 +106,10 @@ class PyShell:
         self.new_term.grab_focus()
 
     def static_connection(self, widget):
-        """Function to create new vte tab"""
+        """Function to create new remote vte tab"""
         self.host = self.entry_host.get_text()
         self.user = self.entry_user.get_text()
-        self.label = gtk.Label(self.host)
+        self.label = gtk.Label(self.user + "@" + self.host)
 
         self.new_term = vte.Terminal()
         self.pid = self.new_term.fork_command()
@@ -91,6 +129,16 @@ class PyShell:
         self.notebook.next_page()
         self.new_term.grab_focus()
         self.new_term.feed_child("ssh %s@%s\n" % (self.user, self.host))
+
+    def main_menu(self, window):
+        """Menu toolbar"""
+        accel_group = gtk.AccelGroup()
+        item_factory = gtk.ItemFactory(gtk.MenuBar, "<main>", accel_group)
+        item_factory.create_items(self.menu_items)
+        self.window.add_accel_group(accel_group)
+
+        self.item_factory = item_factory
+        return item_factory.get_widget("<main>")
 
     def __init__(self):
 
@@ -168,61 +216,20 @@ class PyShell:
         self.term.set_font_full(font, True)
 
         self.hostname = os.uname()[1]
-        self.label = gtk.Label(self.hostname)
+        self.username = getpass.getuser()
+
+        self.label = gtk.Label(self.username + "@" + self.hostname)
         self.notebook.append_page(self.term, self.label)
         self.term.show()
         self.notebook.show()
         self.term.grab_focus()
         
-        # create a TreeStore with one string column to use as the model
-        self.treestore = gtk.TreeStore(str)
-        
-        
-        tree = ET.parse("serverlist.xml")
-        root = tree.getroot()
 
-        for i in root:
-            self.mydir = i.attrib['name']
-            piter = self.treestore.append(None, [self.mydir])
-            for j in i:
-                self.myserver = j.attrib['name']
-                self.treestore.append(piter, [self.myserver])
-        
-        # create the TreeView using treestore
-        self.treeview = gtk.TreeView(self.treestore)
-
-        # create the TreeViewColumn to display the data
-        self.tvcolumn = gtk.TreeViewColumn('Server List')
-
-        # add tvcolumn to treeview
-        self.treeview.append_column(self.tvcolumn)
-
-        # create a CellRendererText to render the data
-        self.cell = gtk.CellRendererText()
-
-        # add the cell to the tvcolumn and allow it to expand
-        self.tvcolumn.pack_start(self.cell, True)
-
-        # set the cell "text" attribute to column 0 - retrieve text
-        # from that column in treestore
-        self.tvcolumn.add_attribute(self.cell, 'text', 0)
-
-        # make it searchable
-        self.treeview.set_search_column(0)
-
-        # Allow sorting on the column
-        self.tvcolumn.set_sort_column_id(0)
-
-        # Allow drag and drop reordering of rows
-        self.treeview.set_reorderable(True)
-
-        self.hpaned.add2(self.treeview)
-        self.treeview.show()
 
         self.window.show()
 
 
-        # Here i will define all handlers and connect for obj
+        # Here i will define all handlers and connect for obj in __init__
         self.connect_button.connect("clicked", self.static_connection)
         self.new_tab_button.connect("clicked", self.new_local_tab)
 
