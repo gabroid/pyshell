@@ -82,6 +82,7 @@ class PyShell:
         self.server_list_file.show()
 
     def open_preferences(self, widget, data):
+        """Open preferences"""
         self.window_preferences = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window_preferences.set_title("PyCM - Preferences")
         self.window_preferences.set_border_width(5)
@@ -96,6 +97,7 @@ class PyShell:
         self.notebook.remove_page(self.current_tab)
     
     def create_vte(self, user=None, host=None):
+        """Function to create vte.Terminal"""
         if user is None or user == "Username":
             self.command = "ssh %s\n" % host
         else:
