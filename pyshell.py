@@ -6,26 +6,36 @@ pygtk.require('2.0')
 import gtk, vte, pango, os
 import xml.etree.ElementTree as ET
 
+
+
 class PyShell:
 
     def delete_event(self, widget, data):
+        """Simple function to quit program"""
         print "Exiting..."
         gtk.main_quit()
         return False
 
     def get_file(obj, widget):
+        """Retrive server list filename"""
         list_file = obj.server_list_file.get_filename()
         obj.server_list_file.destroy()
         return list_file
         
     def open_file(self, widget, data):
+        """Open server list file"""
         self.server_list_file = gtk.FileSelection("Choose a server list file")
         self.server_list_file.ok_button.connect("clicked", self.get_file)
         self.server_list_file.cancel_button.connect("clicked", lambda w: self.server_list_file.destroy())
-
         self.server_list_file.show()
 
+    def remove_tab(self, current_tab):
+        """Remove vte tab when user enter exit in shell"""
+        self.current_tab = self.notebook.get_current_page()
+        self.notebook.remove_page(self.current_tab)
+
     def main_menu(self, window):
+        """Menu toolbar"""
         accel_group = gtk.AccelGroup()
         item_factory = gtk.ItemFactory(gtk.MenuBar, "<main>", accel_group)
         item_factory.create_items(self.menu_items)
@@ -34,11 +44,31 @@ class PyShell:
         self.item_factory = item_factory
         return item_factory.get_widget("<main>")
 
-    def static_connection(obj, widget):
-        host = obj.entry_host.get_text()
-        user = obj.entry_user.get_text()
-        obj.term.feed_child("ssh %s@%s\n" % (user, host))
-        obj.term.grab_focus()
+    def static_connection(self, widget):
+        """Function to create new vte tab"""
+        self.host = self.entry_host.get_text()
+        self.user = self.entry_user.get_text()
+        self.label = gtk.Label(self.host)
+
+        self.new_term = vte.Terminal()
+        self.pid = self.new_term.fork_command()
+        self.new_term.set_emulation('xterm')
+        
+        self.notebook.append_page(self.new_term, self.label)
+        
+        self.new_term.connect("child-exited", self.remove_tab)
+
+        self.font = pango.FontDescription()
+        self.font.set_size(11 * pango.SCALE)
+        self.font.set_weight(pango.WEIGHT_NORMAL)
+        self.font.set_stretch(pango.STRETCH_NORMAL)
+        self.new_term.set_font_full(self.font, True)
+
+        self.new_term.show()
+        self.notebook.next_page()
+        self.new_term.grab_focus()
+        self.new_term.feed_child("ssh %s@%s\n" % (self.user, self.host))
+        self.new_term.grab_focus()
 
     def __init__(self):
 
@@ -95,8 +125,9 @@ class PyShell:
         self.vbox.pack_start(self.hpaned)
         self.hpaned.show()
 
-        self.scroller = gtk.ScrolledWindow()
-        self.hpaned.add1(self.scroller)
+        self.notebook = gtk.Notebook()
+        self.notebook.set_tab_pos(gtk.POS_TOP)
+        self.hpaned.add1(self.notebook)
 
         self.term = vte.Terminal()
         self.term.connect("child-exited", lambda w: gtk.main_quit())
@@ -110,10 +141,12 @@ class PyShell:
         font.set_stretch(pango.STRETCH_NORMAL)
         self.term.set_font_full(font, True)
 
-        self.scroller.add(self.term)
-        self.term.grab_focus()
+        self.hostname = os.uname()[1]
+        self.label = gtk.Label(self.hostname)
+        self.notebook.append_page(self.term, self.label)
         self.term.show()
-        self.scroller.show()
+        self.notebook.show()
+        self.term.grab_focus()
         
         # create a TreeStore with one string column to use as the model
         self.treestore = gtk.TreeStore(str)
