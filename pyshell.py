@@ -3,10 +3,10 @@
 
 import pygtk
 pygtk.require('2.0')
-import gtk, vte, pango, os, getpass
+import gtk, vte, pango, os, getpass, pynotify, gobject
 import xml.etree.ElementTree as ET
 
-
+pynotify.init('pyConnection Manager!')
 
 class PyShell:
 
@@ -94,6 +94,30 @@ class PyShell:
         """Remove vte tab when user enter exit in shell"""
         self.current_tab = self.notebook.get_current_page()
         self.notebook.remove_page(self.current_tab)
+    
+    def create_vte(self, user=None, host=None):
+        if user is None or user == "Username":
+            self.command = "ssh %s\n" % host
+        else:
+            self.command = "ssh %s@%s\n" % (user, host)
+
+        self.new_term = vte.Terminal()
+        self.new_term.connect("child-exited", self.remove_tab)
+        self.pid = self.new_term.fork_command()
+        self.new_term.set_emulation('xterm')
+        
+        self.font = pango.FontDescription()
+        self.font.set_size(11 * pango.SCALE)
+        self.font.set_weight(pango.WEIGHT_NORMAL)
+        self.font.set_stretch(pango.STRETCH_NORMAL)
+        self.new_term.set_font_full(self.font, True)
+
+        self.label = gtk.Label(user + "@" + host)
+        self.notebook.append_page(self.new_term, self.label)
+        self.new_term.feed_child(self.command)
+        self.new_term.show()
+        self.notebook.next_page()
+        self.new_term.grab_focus()
 
     def new_local_tab(self, widget):
         """Open a new vte tab on localhost"""
@@ -102,7 +126,8 @@ class PyShell:
         self.new_term.set_emulation('xterm')
         
         self.hostname = os.uname()[1]
-        self.label = gtk.Label(self.hostname)
+        self.username = getpass.getuser()
+        self.label = gtk.Label(self.username + "@" + self.hostname)
 
         self.notebook.append_page(self.new_term, self.label)
         
@@ -124,32 +149,18 @@ class PyShell:
         self.user = self.entry_user.get_text()
         self.label = gtk.Label(self.user + "@" + self.host)
 
-        self.new_term = vte.Terminal()
-        self.pid = self.new_term.fork_command()
-        self.new_term.set_emulation('xterm')
-        
-        self.notebook.append_page(self.new_term, self.label)
-        
-        self.new_term.connect("child-exited", self.remove_tab)
-
-        self.font = pango.FontDescription()
-        self.font.set_size(11 * pango.SCALE)
-        self.font.set_weight(pango.WEIGHT_NORMAL)
-        self.font.set_stretch(pango.STRETCH_NORMAL)
-        self.new_term.set_font_full(self.font, True)
-
-        self.new_term.show()
-        self.notebook.next_page()
-        self.new_term.grab_focus()
-        self.new_term.feed_child("ssh %s@%s\n" % (self.user, self.host))
+        self.create_vte(self.user, self.host)
 
     def dynamic_connection(self, window, item, obj):
         self.treeselection = self.treeview.get_selection()
         (self.model, self.pathlist) = self.treeselection.get_selected_rows()
         for path in self.pathlist :
             self.tree_iter = self.model.get_iter(path)
-            self.value = self.model.get_value(self.tree_iter,0)
-            print self.value
+            self.host = self.model.get_value(self.tree_iter,0)
+            
+        self.create_vte("maurelio", self.host)
+
+        
 
     def main_menu(self, window):
         """Menu toolbar"""
