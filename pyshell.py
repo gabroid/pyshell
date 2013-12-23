@@ -16,7 +16,7 @@ class PyShell:
         gtk.main_quit()
         return False
 
-    def load_file(self, widow):
+    def load_file(self, window):
         """Retrive and load server list file"""
         self.list_file = self.server_list_file.get_filename()
         self.server_list_file.destroy()
@@ -50,7 +50,8 @@ class PyShell:
 
         # create a CellRendererText to render the data
         self.cell = gtk.CellRendererText()
-
+        #self.cell.set_property('editable', True)
+        
         # add the cell to the tvcolumn and allow it to expand
         self.tvcolumn.pack_start(self.cell, True)
 
@@ -69,6 +70,9 @@ class PyShell:
 
         self.hpaned.add2(self.treeview)
         self.treeview.show()
+
+        # Signal for tree view goes here
+        self.treeview.connect("row-activated", self.dynamic_connection)
         
     def open_file(self, widget, data):
         """Open server list file"""
@@ -76,6 +80,15 @@ class PyShell:
         self.server_list_file.ok_button.connect("clicked", self.load_file)
         self.server_list_file.cancel_button.connect("clicked", lambda w: self.server_list_file.destroy())
         self.server_list_file.show()
+
+    def open_preferences(self, widget, data):
+        self.window_preferences = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.window_preferences.set_title("PyCM - Preferences")
+        self.window_preferences.set_border_width(5)
+        self.window_preferences.set_resizable(True)
+        self.window_preferences.set_default_size(640, 480)
+
+        self.window_preferences.show()
 
     def remove_tab(self, current_tab):
         """Remove vte tab when user enter exit in shell"""
@@ -130,6 +143,14 @@ class PyShell:
         self.new_term.grab_focus()
         self.new_term.feed_child("ssh %s@%s\n" % (self.user, self.host))
 
+    def dynamic_connection(self, window, item, obj):
+        self.treeselection = self.treeview.get_selection()
+        (self.model, self.pathlist) = self.treeselection.get_selected_rows()
+        for path in self.pathlist :
+            self.tree_iter = self.model.get_iter(path)
+            self.value = self.model.get_value(self.tree_iter,0)
+            print self.value
+
     def main_menu(self, window):
         """Menu toolbar"""
         accel_group = gtk.AccelGroup()
@@ -148,10 +169,12 @@ class PyShell:
                   ( "/File/_Open",    "<control>O", self.open_file, 0, None ),
                   ( "/File/_Save",    "<control>S", self.open_file, 0, None ),
                   ( "/File/Quit",     "<control>Q", gtk.main_quit, 0, None ),
+                  ( "/_Edit",         None,         None, 0,  "<Branch>"),
+                  ( "/Edit/_Prefernces","<control>P", self.open_preferences, 0, None)
                   )
 
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.window.set_title("PyShell")
+        self.window.set_title("PyConnection Manager")
         self.window.set_border_width(5)
         self.window.set_resizable(True)
         self.window.set_default_size(1280, 1024)
@@ -232,6 +255,7 @@ class PyShell:
         # Here i will define all handlers and connect for obj in __init__
         self.connect_button.connect("clicked", self.static_connection)
         self.new_tab_button.connect("clicked", self.new_local_tab)
+
 
     def main(self):
         gtk.main()

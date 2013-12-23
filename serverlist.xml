@@ -1,8 +1,8 @@
 <data>
-    <dir name="dir1">
-        <item name="item1"></item>
-        <item name="item2"></item>
-        <item name="item3"></item>
+    <dir name="home">
+        <item name="192.168.1.10"></item>
+        <item name="192.168.1.20"></item>
+        <item name="192.168.1.6"></item>
         <item name="item4"></item>
     </dir>
     <dir name="dir2">
